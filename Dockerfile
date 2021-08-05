@@ -1,4 +1,4 @@
-FROM rocker/verse:4.1.0
+FROM rocker/verse:4.0.3
 
 # system libraries of general use
 ## install debian packages
@@ -6,6 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update -qq && apt-get -y --no-install-recommends install \
     libxml2-dev \
+    build-essential \
     libcairo2-dev \
     libpq-dev \
     libssh2-1-dev \
@@ -20,6 +21,8 @@ RUN apt-get update -qq && apt-get -y --no-install-recommends install \
     libgsl-dev \
     libgdal-dev \
     libxt-dev \
+    libgeos-dev \
+    libproj-dev \
     libglpk-dev
 
 RUN apt-get update && \
@@ -27,34 +30,34 @@ RUN apt-get update && \
     apt-get clean
 
 # Install R packages (https://stackoverflow.com/questions/45289764/install-r-packages-using-docker-file)
+
 RUN install2.r --error \
     httr \
     Cairo \
     plotly \
     Rfast \
+    devtools \
+    remotes \
+    Seurat \
+    pagoda2 \
     BiocManager \
-    devtools
+    uwot \
+    && rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
-# RUN R -e "install.packages(c('stringr', \
-#                             'reshape2', \
-#                             'plyr', \
-#                             'caret', \
-#                             'ggplot2', \
-#                             'devtools'), dependencies=TRUE, repos='http://cran.studio.com/')"
+# install packages from Bioconductor
+RUN R -e 'requireNamespace("BiocManager"); BiocManager::install(c("BiocGenerics", "DelayedArray", "DelayedMatrixStats", "limma", "S4Vectors", "SingleCellExperiment", "SummarizedExperiment", "batchelor", "Matrix.utils", "multtest", "SingleR"));' \
+&& rm -rf /tmp/downloaded_packages/ /tmp/*.rds
 
-# example installing package from github using devtools
-RUN R -e "BiocManager::install(c('BiocGenerics', 'DelayedArray', 'DelayedMatrixStats', 'limma', 'S4Vectors', 'SingleCellExperiment', 'SummarizedExperiment', 'batchelor', 'Matrix.utils'))"
-RUN R -e "BiocManager::install('multtest')"
-RUN R -e "devtools::install_github('Vivianstats/scImpute')"
-RUN R -e "remotes::install_github('jlmelville/uwot')"
-RUN R -e "remotes::install_github('satijalab/seurat', ref = 'release/4.1.0')"
-RUN R -e "remotes::install_github('kharchenkolab/pagoda2')"
-RUN R -e "install.packages('devtools',dependencies=TRUE, repos='http://cran.rstudio.com/')"
-RUN R -e "devtools::install_github('cole-trapnell-lab/leidenbase')"
-RUN R -e "devtools::install_github('cole-trapnell-lab/monocle3')"
-RUN R -e "BiocManager::install('SingleR')"
+# install packages from GitHub
+RUN R -e "remotes::install_github('cole-trapnell-lab/leidenbase')"
 RUN R -e "remotes::install_github('chris-mcginnis-ucsf/DoubletFinder')"
+RUN R -e 'devtools::install_github("cole-trapnell-lab/monocle3")'
 
-# example installing package from folder
-# make sure folder is in same directory as Dockerfile
-# install.packages("/my/dir/package.tar.gz",repos=NULL, type="source")
+# try to manually install monocle3
+# WORKDIR /app
+# RUN git clone https://github.com/cole-trapnell-lab/monocle3.git
+# RUN R -e 'install.packages("/app/monocle3", repos = NULL, type = "source")'
+# RUN rm -rf /app/monocle3
+
+
+ENTRYPOINT ["/bin/bash"]
